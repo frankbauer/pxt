@@ -140,7 +140,8 @@ namespace pxt.clocks {
     function mkPoint(t: string): Point {
         return new Point(null, t);
     }
-    const pNumber = mkPoint("number");
+    const pDouble = mkPoint("double");
+    const pInt = mkPoint("int");
     const pBoolean = mkPoint("boolean");
     const pString = mkPoint("string");
     const pUnit = mkPoint("void");
@@ -148,7 +149,8 @@ namespace pxt.clocks {
     function ground(t?: string): Point {
         if (!t) return mkPoint(t);
         switch (t.toLowerCase()) {
-            case "number": return pNumber;
+            case "double": return pDouble;
+            case "int": return pInt;
             case "boolean": return pBoolean;
             case "string": return pString;
             case "void": return pUnit;
@@ -316,12 +318,12 @@ namespace pxt.clocks {
             try {
                 switch (b.type) {
                     case "math_op2":
-                        unionParam(e, b, "x", ground(pNumber.type));
-                        unionParam(e, b, "y", ground(pNumber.type));
+                        unionParam(e, b, "x", ground(pDouble.type));
+                        unionParam(e, b, "y", ground(pDouble.type));
                         break;
 
                     case "math_op3":
-                        unionParam(e, b, "x", ground(pNumber.type));
+                        unionParam(e, b, "x", ground(pDouble.type));
                         break;
 
                     case "math_arithmetic":
@@ -329,8 +331,8 @@ namespace pxt.clocks {
                         switch (b.getFieldValue("OP")) {
                             case "ADD": case "MINUS": case "MULTIPLY": case "DIVIDE":
                             case "LT": case "LTE": case "GT": case "GTE": case "POWER":
-                                unionParam(e, b, "A", ground(pNumber.type));
-                                unionParam(e, b, "B", ground(pNumber.type));
+                                unionParam(e, b, "A", ground(pDouble.type));
+                                unionParam(e, b, "B", ground(pDouble.type));
                                 break;
                             case "AND": case "OR":
                                 attachPlaceholderIf(e, b, "A", pBoolean.type);
@@ -366,7 +368,7 @@ namespace pxt.clocks {
 
                     case "pxt_controls_for":
                     case "controls_simple_for":
-                        unionParam(e, b, "TO", ground(pNumber.type));
+                        unionParam(e, b, "TO", ground(pDouble.type));
                         break;
                     case "pxt_controls_for_of":
                     case "controls_for_of":
@@ -390,7 +392,7 @@ namespace pxt.clocks {
                         }
                         break;
                     case "controls_repeat_ext":
-                        unionParam(e, b, "TIMES", ground(pNumber.type));
+                        unionParam(e, b, "TIMES", ground(pDouble.type));
                         break;
 
                     case "device_while":
@@ -398,7 +400,7 @@ namespace pxt.clocks {
                         break;
                     case "lists_index_get":
                         unionParam(e, b, "LIST", ground("Array"));
-                        unionParam(e, b, "INDEX", ground(pNumber.type));
+                        unionParam(e, b, "INDEX", ground(pInt.type));
                         const listType = returnType(e, getInputTargetBlock(b, "LIST"));
                         const ret = returnType(e, b);
                         genericLink(listType, ret);
@@ -407,7 +409,7 @@ namespace pxt.clocks {
                         unionParam(e, b, "LIST", ground("Array"));
                         attachPlaceholderIf(e, b, "VALUE");
                         handleGenericType(b, "LIST");
-                        unionParam(e, b, "INDEX", ground(pNumber.type));
+                        unionParam(e, b, "INDEX", ground(pInt.type));
                         break;
                     case 'function_call':
                         (b as Blockly.FunctionCallBlock).getArguments().forEach(arg => {
@@ -461,7 +463,7 @@ namespace pxt.clocks {
         // assigned to), just unify it with int...
         e.allVariables.forEach((v: VarInfo) => {
             if (getConcreteType(v.type).type == null)
-                union(v.type, ground(pNumber.type));
+                union(v.type, ground(pInt.type));
         });
 
         function connectionCheck(i: Blockly.Input) {
@@ -706,10 +708,10 @@ namespace pxt.clocks {
         const name = escapeVarName(b.getFieldValue("function_name"), e, true);
         const stmts = getInputTargetBlock(b, "STACK");
         const argsDeclaration = (b as Blockly.FunctionDefinitionBlock).getArguments().map(a => {
-            return `${escapeVarName(a.name, e)}: ${a.type}`;
+            return `${a.type} ${escapeVarName(a.name, e)}`;
         });
         return [
-            mkText(`function ${name} (${argsDeclaration.join(", ")})`),
+            mkText(`void ${name} (${argsDeclaration.join(", ")})`),
             compileStatements(e, stmts)
         ];
     }
@@ -718,7 +720,7 @@ namespace pxt.clocks {
         const name = escapeVarName(b.getFieldValue("NAME"), e, true);
         const stmts = getInputTargetBlock(b, "STACK");
         return [
-            mkText("function " + name + "() "),
+            mkText("void " + name + "() "),
             compileStatements(e, stmts)
         ];
     }
@@ -754,7 +756,7 @@ namespace pxt.clocks {
 
     function defaultValueForType(t: Point): JsNode {
         if (t.type == null) {
-            union(t, ground(pNumber.type));
+            union(t, ground(pInt.type));
             t = find(t);
         }
 
@@ -765,7 +767,9 @@ namespace pxt.clocks {
         switch (t.type) {
             case "boolean":
                 return H.mkBooleanLiteral(false);
-            case "number":
+            case "double":
+                return H.mkNumberLiteral(0.0);
+            case "int":
                 return H.mkNumberLiteral(0);
             case "string":
                 return H.mkStringLiteral("");
@@ -955,7 +959,7 @@ namespace pxt.clocks {
         let binding = lookup(e, b, getLoopVariableField(b).getField("VAR").getText());
 
         return [
-            mkText("for (let " + binding.escapedName + " = "),
+            mkText("for (int " + binding.escapedName + " = "),
             bFrom ? compileExpression(e, bFrom, comments) : mkText("0"),
             mkText("; "),
             mkInfix(mkText(binding.escapedName), "<=", compileExpression(e, bTo, comments)),
@@ -974,7 +978,7 @@ namespace pxt.clocks {
         for (let i = 0; !valid(name); i++)
             name = "i" + i;
         return [
-            mkText("for (let " + name + " = 0; "),
+            mkText("for (int " + name + " = 0; "),
             mkInfix(mkText(name), "<", bound),
             mkText("; " + name + "++)"),
             body
@@ -999,17 +1003,22 @@ namespace pxt.clocks {
         let binding = lookup(e, b, getLoopVariableField(b).getField("VAR").getText());
 
         return [
-            mkText("for (let " + binding.escapedName + " of "),
+            mkText("for (int " + binding.escapedName + " of "),
             compileExpression(e, bOf, comments),
             mkText(")"),
             compileStatements(e, bDo)
         ]
     }
 
-    function compileForever(e: Environment, b: Blockly.Block): JsNode {
+    function compileForever(e: Environment, b: Blockly.Block): JsNode[] {
         let bBody = getInputTargetBlock(b, "HANDLER");
         let body = compileStatements(e, bBody);
-        return mkCallWithCallback(e, "basic", "forever", [], body);
+        let name = "forever";
+        //return mkCallWithCallback(e, "basic", "forever", [], body);
+        return [
+            mkText("void " + name + "() "),
+            body
+        ];
     }
 
     // convert to javascript friendly name
@@ -1198,9 +1207,15 @@ namespace pxt.clocks {
     function compileStdBlock(e: Environment, b: Blockly.Block, f: StdFunc, comments: string[]) {
         return mkStmt(compileStdCall(e, b, f, comments))
     }
+    
 
     function mkCallWithCallback(e: Environment, n: string, f: string, args: JsNode[], body: JsNode, argumentDeclaration?: JsNode, isExtension = false): JsNode {
         body.noFinalNewline = true
+        //special case for the central loop
+        if (f == "forever") {
+            return mkGroup([mkText("void loop()"), body]);
+        }
+        console.log("calling ", f);
         let callback: JsNode;
         if (argumentDeclaration) {
             callback = mkGroup([argumentDeclaration, body]);
@@ -1829,9 +1844,10 @@ namespace pxt.clocks {
             if (tpinfo && tpinfo.attributes.autoCreate)
                 defl = mkText(tpinfo.attributes.autoCreate + "()")
             else
-                tp = ": " + tpname
+                tp = tpname + " "
         }
-        return mkStmt(mkText("let " + v.escapedName + tp + " = "), defl)
+        
+        return mkStmt(mkText(tp + v.escapedName + " = "), defl)
     }
 
     function countOptionals(b: Blockly.Block) {
@@ -2243,7 +2259,7 @@ namespace pxt.clocks {
         switch (block.type) {
             case 'pxt_controls_for':
             case 'controls_simple_for':
-                return [[getLoopVariableField(block).getField("VAR").getText(), pNumber]];
+                return [[getLoopVariableField(block).getField("VAR").getText(), pInt]];
             case 'pxt_controls_for_of':
             case 'controls_for_of':
                 return [[getLoopVariableField(block).getField("VAR").getText(), mkPoint(null)]];
