@@ -97,6 +97,14 @@ export class Editor extends toolboxeditor.ToolboxEditor {
         if (!this.typeScriptSaveable) return Promise.resolve('');
         this.clearHighlightedStatements();
         try {
+            
+            pxt.clocks.compileAsync(this.editor, this.blockInfo)
+                .then((compilationResult) => {
+                    this.compilationResult = compilationResult;
+                    pxt.tickActivity("blocks.compile");
+                    console.log("Compile C++");
+                    console.log(this.compilationResult.source);
+                });
             return pxt.blocks.compileAsync(this.editor, this.blockInfo)
                 .then((compilationResult) => {
                     this.compilationResult = compilationResult;
