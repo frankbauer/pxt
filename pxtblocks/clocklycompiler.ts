@@ -1237,7 +1237,7 @@ namespace pxt.clocks {
 
     function compileStartEvent(e: Environment, b: Blockly.Block): JsNode {
         const bBody = getInputTargetBlock(b, "HANDLER");
-        const body = compileStatements(e, bBody);
+        const body = compileStatements(e, bBody, false);
 
         if (pxt.appTarget.compile && pxt.appTarget.compile.onStartText && body && body.children) {
             body.children.unshift(mkStmt(mkText(`// ${pxtc.ON_START_COMMENT}\n`)))
@@ -1395,7 +1395,7 @@ namespace pxt.clocks {
         return r;
     }
 
-    function compileStatements(e: Environment, b: Blockly.Block): JsNode {
+    function compileStatements(e: Environment, b: Blockly.Block, declarVars: boolean = true): JsNode {
         let stmts: JsNode[] = [];
         let firstBlock = b;
 
@@ -1406,8 +1406,10 @@ namespace pxt.clocks {
 
         if (firstBlock && e.blockDeclarations[firstBlock.id]) {
             e.blockDeclarations[firstBlock.id].filter(v => !v.alreadyDeclared).forEach(varInfo => {
-                stmts.unshift(mkVariableDeclaration(varInfo, e.blocksInfo));
-                varInfo.alreadyDeclared = true;
+                if (declarVars) {
+                    stmts.unshift(mkVariableDeclaration(varInfo, e.blocksInfo));
+                    varInfo.alreadyDeclared = true;
+                }
             });
         }
         return mkBlock(stmts);
@@ -1638,6 +1640,7 @@ namespace pxt.clocks {
             });
 
             const leftoverVars = e.allVariables.filter(v => !v.alreadyDeclared).map(v => mkVariableDeclaration(v, blockInfo));
+            console.log("Leftovers", leftoverVars);
             return stmtsEnums.concat(leftoverVars.concat(stmtsMain));
         } catch (err) {
             let be: Blockly.Block = (err as any).block;
@@ -1820,6 +1823,11 @@ namespace pxt.clocks {
     function mkVariableDeclaration(v: VarInfo, blockInfo: pxtc.BlocksInfo) {
         const t = getConcreteType(v.type);
         let defl: JsNode;
+        console.log("mkVariableDeclaration", v, t);
+        var stack = new Error().stack;
+        console.log("PRINTING CALL STACK");
+        console.log( stack );
+        
 
         if (t.type === "Array") {
             defl = mkText("[]");
