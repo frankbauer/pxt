@@ -1010,15 +1010,10 @@ namespace pxt.clocks {
         ]
     }
 
-    function compileForever(e: Environment, b: Blockly.Block): JsNode[] {
+    function compileForever(e: Environment, b: Blockly.Block): JsNode {
         let bBody = getInputTargetBlock(b, "HANDLER");
         let body = compileStatements(e, bBody);
-        let name = "forever";
-        //return mkCallWithCallback(e, "basic", "forever", [], body);
-        return [
-            mkText("void " + name + "() "),
-            body
-        ];
+        return mkCallWithCallback(e, "basic", "forever", [], body);        
     }
 
     // convert to javascript friendly name
@@ -1248,7 +1243,8 @@ namespace pxt.clocks {
             body.children.unshift(mkStmt(mkText(`// ${pxtc.ON_START_COMMENT}\n`)))
         }
 
-        return body;
+        return mkGroup([mkText("void setup()"), body]);
+        //return body;
     }
 
     function compileEvent(e: Environment, b: Blockly.Block, stdfun: StdFunc, args: string[], ns: string, comments: string[]): JsNode {

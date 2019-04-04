@@ -123,6 +123,10 @@ namespace pxt.clocks {
         }
 
         export function mkCall(name: string, args: JsNode[], externalInputs = false, method = false) {
+            console.log("mkCall", name);
+        let stack = new Error().stack;
+        console.log("PRINTING CALL STACK");
+        console.log( stack );
             if (method)
                 return mkGroup([
                     mkInfix(args[0], ".", mkText(name)),
