@@ -98,9 +98,9 @@ namespace pxt.clocks {
 
         export function mkArrayLiteral(args: JsNode[]) {
             return mkGroup([
-                mkText("["),
+                mkText("{"),
                 mkCommaSep(args, false),
-                mkText("]")
+                mkText("}")
             ])
         }
 

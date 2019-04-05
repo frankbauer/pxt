@@ -140,8 +140,7 @@ namespace pxt.clocks {
     function mkPoint(t: string): Point {
         return new Point(null, t);
     }
-    const pDouble = mkPoint("double");
-    const pInt = mkPoint("int");
+    const pNumber = mkPoint("double");
     const pBoolean = mkPoint("boolean");
     const pString = mkPoint("string");
     const pUnit = mkPoint("void");
@@ -149,8 +148,8 @@ namespace pxt.clocks {
     function ground(t?: string): Point {
         if (!t) return mkPoint(t);
         switch (t.toLowerCase()) {
-            case "double": return pDouble;
-            case "int": return pInt;
+            case "double": return pNumber;
+            case "int": return pNumber;
             case "boolean": return pBoolean;
             case "string": return pString;
             case "void": return pUnit;
@@ -201,7 +200,9 @@ namespace pxt.clocks {
                             if (t.parentType) {
                                 return t.parentType;
                             }
-                            tp = ground(t.type + "[]");
+                            if (t.type == 'number') tp = ground("BlocklyArray");
+                            else if (t.type == 'string') tp = ground("BlocklyStringArray");
+                            else tp = ground(t.type + "[]");
                             genericLink(tp, t);
                             break;
                         }
@@ -228,7 +229,7 @@ namespace pxt.clocks {
                     if (parentType.childType) {
                         return parentType.childType;
                     }
-                    const p = isArrayType(parentType.type) ? mkPoint(parentType.type.substr(0, parentType.type.length - 2)) : mkPoint(null);
+                    const p = isArrayType(parentType.type) ? mkPoint(parentType.type.substr(0, parentType.type.length - 0)) : mkPoint(null);
                     genericLink(parentType, p);
                     return p;
                 }
@@ -253,7 +254,7 @@ namespace pxt.clocks {
     }
 
     function isArrayType(type: string) {
-        return type && type.indexOf("[]") !== -1;
+        return type && (type.indexOf("[]") !== -1 || type === "BlocklyArray" || type === "BlocklyStringArray");
     }
 
     function mkPlaceholderBlock(e: Environment, parent: Blockly.Block, type?: string): Blockly.Block {
@@ -318,12 +319,12 @@ namespace pxt.clocks {
             try {
                 switch (b.type) {
                     case "math_op2":
-                        unionParam(e, b, "x", ground(pDouble.type));
-                        unionParam(e, b, "y", ground(pDouble.type));
+                        unionParam(e, b, "x", ground(pNumber.type));
+                        unionParam(e, b, "y", ground(pNumber.type));
                         break;
 
                     case "math_op3":
-                        unionParam(e, b, "x", ground(pDouble.type));
+                        unionParam(e, b, "x", ground(pNumber.type));
                         break;
 
                     case "math_arithmetic":
@@ -331,8 +332,8 @@ namespace pxt.clocks {
                         switch (b.getFieldValue("OP")) {
                             case "ADD": case "MINUS": case "MULTIPLY": case "DIVIDE":
                             case "LT": case "LTE": case "GT": case "GTE": case "POWER":
-                                unionParam(e, b, "A", ground(pDouble.type));
-                                unionParam(e, b, "B", ground(pDouble.type));
+                                unionParam(e, b, "A", ground(pNumber.type));
+                                unionParam(e, b, "B", ground(pNumber.type));
                                 break;
                             case "AND": case "OR":
                                 attachPlaceholderIf(e, b, "A", pBoolean.type);
@@ -368,7 +369,7 @@ namespace pxt.clocks {
 
                     case "pxt_controls_for":
                     case "controls_simple_for":
-                        unionParam(e, b, "TO", ground(pDouble.type));
+                        unionParam(e, b, "TO", ground(pNumber.type));
                         break;
                     case "pxt_controls_for_of":
                     case "controls_for_of":
@@ -392,7 +393,7 @@ namespace pxt.clocks {
                         }
                         break;
                     case "controls_repeat_ext":
-                        unionParam(e, b, "TIMES", ground(pDouble.type));
+                        unionParam(e, b, "TIMES", ground(pNumber.type));
                         break;
 
                     case "device_while":
@@ -400,7 +401,7 @@ namespace pxt.clocks {
                         break;
                     case "lists_index_get":
                         unionParam(e, b, "LIST", ground("Array"));
-                        unionParam(e, b, "INDEX", ground(pInt.type));
+                        unionParam(e, b, "INDEX", ground(pNumber.type));
                         const listType = returnType(e, getInputTargetBlock(b, "LIST"));
                         const ret = returnType(e, b);
                         genericLink(listType, ret);
@@ -409,7 +410,7 @@ namespace pxt.clocks {
                         unionParam(e, b, "LIST", ground("Array"));
                         attachPlaceholderIf(e, b, "VALUE");
                         handleGenericType(b, "LIST");
-                        unionParam(e, b, "INDEX", ground(pInt.type));
+                        unionParam(e, b, "INDEX", ground(pNumber.type));
                         break;
                     case 'function_call':
                         (b as Blockly.FunctionCallBlock).getArguments().forEach(arg => {
@@ -463,7 +464,7 @@ namespace pxt.clocks {
         // assigned to), just unify it with int...
         e.allVariables.forEach((v: VarInfo) => {
             if (getConcreteType(v.type).type == null)
-                union(v.type, ground(pInt.type));
+                union(v.type, ground(pNumber.type));
         });
 
         function connectionCheck(i: Blockly.Input) {
@@ -476,7 +477,7 @@ namespace pxt.clocks {
                 const gen = getInputTargetBlock(b, genericArgs[0].name);
                 if (gen) {
                     const arg = returnType(e, gen);
-                    const arrayType = arg.type ? ground(returnType(e, gen).type + "[]") : ground(null);
+                    const arrayType = arg.type ? ground(returnType(e, gen).type + "*") : ground(null);
                     genericLink(arrayType, arg);
                     unionParam(e, b, name, arrayType);
                     return true;
@@ -512,7 +513,7 @@ namespace pxt.clocks {
                 if (t.parentType) {
                     const parent = getConcreteType(t.parentType, found);
                     if (parent.type && parent.type !== "Array") {
-                        t.type = parent.type.substr(0, parent.type.length - 2);
+                        t.type = parent.type.substr(0, parent.type.length - 0);
                         return t;
                     }
                 }
@@ -520,7 +521,9 @@ namespace pxt.clocks {
                 if (t.childType) {
                     const child = getConcreteType(t.childType, found);
                     if (child.type) {
-                        t.type = child.type + "[]";
+                        if (child.type == "number") t.type = "BlocklyArray";
+                        else if (child.type == "string") t.type = "BlocklyStringArray";
+                        else t.type = child.type + "[]";
                         return t;
                     }
 
@@ -669,14 +672,15 @@ namespace pxt.clocks {
         // collect argument
         let args = b.inputList.map(input => input.connection && input.connection.targetBlock() ? compileExpression(e, input.connection.targetBlock(), comments) : undefined)
             .filter(e => !!e);
-
+        console.log("compileCreateList", args, e);
+        
         return H.mkArrayLiteral(args);
     }
 
     function compileListGet(e: Environment, b: Blockly.Block, comments: string[]): JsNode {
         const listBlock = getInputTargetBlock(b, "LIST");
         const listExpr = compileExpression(e, listBlock, comments);
-        const index = compileExpression(e, getInputTargetBlock(b, "INDEX"), comments);
+        const index = compileExpression(e, getInputTargetBlock(b, "INDEX"), comments);        
         const res = mkGroup([listExpr, mkText("["), index, mkText("]")]);
 
         return res;
@@ -689,6 +693,7 @@ namespace pxt.clocks {
         const value = compileExpression(e, getInputTargetBlock(b, "VALUE"), comments);
         const res = mkGroup([listExpr, mkText("["), index, mkText("] = "), value]);
 
+        console.log("compileListSet", res, e);
         return listBlock.type === "lists_create_with" ? prefixWithSemicolon(res) : res;
 
     }
@@ -756,12 +761,12 @@ namespace pxt.clocks {
 
     function defaultValueForType(t: Point): JsNode {
         if (t.type == null) {
-            union(t, ground(pInt.type));
+            union(t, ground(pNumber.type));
             t = find(t);
         }
 
         if (isArrayType(t.type)) {
-            return mkText("[]");
+            return mkText("{}");
         }
 
         switch (t.type) {
@@ -798,7 +803,7 @@ namespace pxt.clocks {
                     const call = e.stdCallTable[b.parentBlock_.type];
                     isExpression = call && call.isExpression;
                 }
-                const arrayNode = mkText("[0]");
+                const arrayNode = mkText("{0}");
                 expr = isExpression ? arrayNode : prefixWithSemicolon(arrayNode);
             }
             else {
@@ -1830,19 +1835,19 @@ namespace pxt.clocks {
         
 
         if (t.type === "Array") {
-            defl = mkText("[]");
+            defl = mkText("{}");
         }
         else {
             defl = defaultValueForType(t);
         }
 
         let tp = ""
-        if (defl.op == "null" || defl.op == "[]") {
+        if (defl.op == "null" || defl.op == "{}") {
             let tpname = t.type
             // If the type is "Array" or null[] it means that we failed to narrow the type of array.
             // Best we can do is just default to number[]
             if (tpname === "Array" || tpname === "null[]") {
-                tpname = "number[]";
+                tpname = "BlocklyArray";
             }
             let tpinfo = blockInfo.apis.byQName[tpname]
             if (tpinfo && tpinfo.attributes.autoCreate)
@@ -2263,7 +2268,7 @@ namespace pxt.clocks {
         switch (block.type) {
             case 'pxt_controls_for':
             case 'controls_simple_for':
-                return [[getLoopVariableField(block).getField("VAR").getText(), pInt]];
+                return [[getLoopVariableField(block).getField("VAR").getText(), pNumber]];
             case 'pxt_controls_for_of':
             case 'controls_for_of':
                 return [[getLoopVariableField(block).getField("VAR").getText(), mkPoint(null)]];
