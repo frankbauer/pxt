@@ -1649,7 +1649,11 @@ namespace pxt.clocks {
 
             const leftoverVars = e.allVariables.filter(v => !v.alreadyDeclared).map(v => mkVariableDeclaration(v, blockInfo));
             console.log("Leftovers", leftoverVars);
-            return stmtsEnums.concat(leftoverVars.concat(stmtsMain));
+
+            const includes = [
+                mkText("#include \"BlocklyHelper.h\"\n")
+            ];
+            return includes.concat(stmtsEnums.concat(leftoverVars.concat(stmtsMain)));
         } catch (err) {
             let be: Blockly.Block = (err as any).block;
             if (be) {
