@@ -531,7 +531,8 @@ namespace pxt.clocks {
             }
         }
 
-        if (t.type === "Number") t.type = "double";
+        if (t.type === "Number" || t.type === "number") t.type = "double";
+        else if (t.type === "string") t.type = "std::string";
         return t;
     }
 
@@ -1844,7 +1845,7 @@ namespace pxt.clocks {
         }
 
         let tp = ""
-        if (defl.op == "null" || defl.op == "{}") {
+        if (defl.op == "null" || defl.op == "{}" || tp == "") {
             let tpname = t.type
             // If the type is "Array" or null[] it means that we failed to narrow the type of array.
             // Best we can do is just default to number[]
