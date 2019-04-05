@@ -200,7 +200,7 @@ namespace pxt.clocks {
                             if (t.parentType) {
                                 return t.parentType;
                             }
-                            if (t.type == 'number') tp = ground("BlocklyArray");
+                            if (t.type == 'number' || t.type == 'Number' || t.type == 'double') tp = ground("BlocklyArray");
                             else if (t.type == 'string') tp = ground("BlocklyStringArray");
                             else tp = ground(t.type + "[]");
                             genericLink(tp, t);
@@ -521,7 +521,7 @@ namespace pxt.clocks {
                 if (t.childType) {
                     const child = getConcreteType(t.childType, found);
                     if (child.type) {
-                        if (child.type == "number") t.type = "BlocklyArray";
+                        if (child.type == 'number' || child.type == 'Number' || child.type == 'double')  t.type = "BlocklyArray";
                         else if (child.type == "string") t.type = "BlocklyStringArray";
                         else t.type = child.type + "[]";
                         return t;
@@ -530,6 +530,8 @@ namespace pxt.clocks {
                 }
             }
         }
+
+        if (t.type === "Number") t.type = "double";
         return t;
     }
 
@@ -1087,15 +1089,15 @@ namespace pxt.clocks {
         let bindString = binding.escapedName + " = ";
 
         if (isDef) {
-            binding.alreadyDeclared = true;
+            //binding.alreadyDeclared = true;
             const declaredType = getConcreteType(binding.type);
 
-            bindString = `let ${binding.escapedName} = `;
+            bindString = `${binding.escapedName} = `;
 
             if (declaredType) {
                 const expressionType = getConcreteType(returnType(e, bExpr));
                 if (declaredType.type !== expressionType.type) {
-                    bindString = `let ${binding.escapedName}: ${declaredType.type} = `;
+                    bindString = `${declaredType.type} ${binding.escapedName} = `;
                 }
             }
         }
