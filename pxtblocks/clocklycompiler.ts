@@ -716,7 +716,11 @@ namespace pxt.clocks {
         const name = escapeVarName(b.getFieldValue("function_name"), e, true);
         const stmts = getInputTargetBlock(b, "STACK");
         const argsDeclaration = (b as Blockly.FunctionDefinitionBlock).getArguments().map(a => {
-            return `${a.type} ${escapeVarName(a.name, e)}`;
+            let tp = a.type
+            if (tp === 'number') tp = 'double'
+            else if (tp === 'string') tp = 'std::string'
+
+            return `${tp} ${escapeVarName(a.name, e)}`;
         });
         return [
             mkText(`void ${name} (${argsDeclaration.join(", ")})`),
@@ -1572,7 +1576,7 @@ namespace pxt.clocks {
 
             infer(e, w);
 
-            const stmtsMain: JsNode[] = [];
+            const stmtsMain: JsNode[] = [];            
 
             // compile workspace comments, add them to the top
             const topComments = w.getTopComments(true);
