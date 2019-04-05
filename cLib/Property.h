@@ -2,18 +2,34 @@
 #define __PROPERTY__
 
 template<class PropertyType, class ParentObject>
-class Property
+class ConstProperty
 {
+protected:
     typedef PropertyType (ParentObject::* propertyGetter)() const;
 
-    ParentObject& m_objInstance;
+    ParentObject&      parentObject;
     propertyGetter     getterMethod;
 
 public:
-    Property(ParentObject& objInstance, propertyGetter pGet)
-    :  m_objInstance(objInstance), getterMethod(pGet)
+    ConstProperty(ParentObject& objInstance, propertyGetter pGet)
+    :  parentObject(objInstance), getterMethod(pGet)
     {}
-    operator PropertyType() { return (m_objInstance.*getterMethod)(); }
+    operator PropertyType() { return (parentObject.*getterMethod)(); }
+};
+
+template<class PropertyType, class ParentObject>
+class Property : public ConstProperty<PropertyType, ParentObject>
+{
+    using typename ConstProperty<PropertyType, ParentObject>::propertyGetter;
+protected:
+    typedef void (ParentObject::* propertySetter)(PropertyType);
+
+    propertySetter     setterMethod;
+public:
+    Property(ParentObject& objInstance, propertyGetter pGet, propertySetter pSet)
+    :  ConstProperty<PropertyType, ParentObject>(objInstance, pGet), setterMethod(pSet)
+    {}
+    void operator =(PropertyType value) { (ConstProperty<PropertyType, ParentObject>::parentObject.*setterMethod)(value); }
 };
 
 #endif

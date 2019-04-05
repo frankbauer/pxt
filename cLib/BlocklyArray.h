@@ -70,7 +70,7 @@ class BlocklyArray {
             return *this;
         }
         
-        Property<double, BlocklyArray> length;
+        ConstProperty<double, BlocklyArray> length;
     private:
         static double zero;
         std::vector<double> data;
